@@ -11,9 +11,17 @@ import java.util.concurrent.Future;
 
 public class ReportServiceExecutors {
 
-    private ExecutorService executor = Executors.newCachedThreadPool();
+    private ExecutorService executor;
 
     private LoadGenerator loadGenerator = new LoadGenerator();
+
+    public ReportServiceExecutors(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public ReportServiceExecutors() {
+        this(Executors.newCachedThreadPool());
+    }
 
     public Others.Report getReport() {
         Future<Collection<Others.Item>> iFuture =
