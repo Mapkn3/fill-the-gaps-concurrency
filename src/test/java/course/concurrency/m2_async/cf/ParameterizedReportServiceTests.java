@@ -1,5 +1,6 @@
 package course.concurrency.m2_async.cf;
 
+import course.concurrency.m2_async.cf.report.ReportServiceCF;
 import course.concurrency.m2_async.cf.report.ReportServiceExecutors;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -11,10 +12,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Stream;
 
 import static java.util.concurrent.Executors.*;
@@ -68,13 +66,17 @@ public class ParameterizedReportServiceTests {
                 Arguments.of(
                         "newFixedThreadPool(100)",
                         newFixedThreadPool(100)
+                ),
+                Arguments.of(
+                        "ForkJoinPool.commonPool()",
+                        ForkJoinPool.commonPool()
                 )
         );
     }
 
     @MethodSource("parameterizedTestMultipleTasksArgs")
     @ParameterizedTest(name = "ExecutorService: {0}")
-    public void parameterizedTestMultipleTasks(String name, ExecutorService executor) throws InterruptedException {
+    public void parameterizedReportServiceExecutorsTest(String name, ExecutorService executor) throws InterruptedException {
         int poolSize = Runtime.getRuntime().availableProcessors() * 3;
         int iterations = 5;
 
@@ -82,6 +84,36 @@ public class ParameterizedReportServiceTests {
         ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
 
         ReportServiceExecutors reportService = new ReportServiceExecutors(executor);
+        for (int i = 0; i < poolSize; i++) {
+            executorService.submit(() -> {
+                try {
+                    latch.await();
+                } catch (InterruptedException ignored) {}
+                for (int it = 0; it < iterations; it++) {
+                    reportService.getReport();
+                }
+            });
+        }
+
+        long start = System.currentTimeMillis();
+        latch.countDown();
+        executorService.shutdown();
+        executorService.awaitTermination(5, TimeUnit.MINUTES);
+        long end = System.currentTimeMillis();
+
+        report.addRow(new ExecutorServiceTestsReport.ExecutorServiceTestsReportRow(name, Duration.ofMillis(end - start)));
+    }
+
+    @MethodSource("parameterizedTestMultipleTasksArgs")
+    @ParameterizedTest(name = "ExecutorService: {0}")
+    public void parameterizedReportServiceCFTest(String name, ExecutorService executor) throws InterruptedException {
+        int poolSize = Runtime.getRuntime().availableProcessors() * 3;
+        int iterations = 5;
+
+        CountDownLatch latch = new CountDownLatch(1);
+        ExecutorService executorService = Executors.newFixedThreadPool(poolSize);
+
+        ReportServiceCF reportService = new ReportServiceCF(executor);
         for (int i = 0; i < poolSize; i++) {
             executorService.submit(() -> {
                 try {

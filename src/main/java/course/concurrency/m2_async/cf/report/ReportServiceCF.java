@@ -10,9 +10,17 @@ import java.util.concurrent.ForkJoinPool;
 
 public class ReportServiceCF {
 
-    private ExecutorService executor = ForkJoinPool.commonPool();
+    private ExecutorService executor;
 
     private LoadGenerator loadGenerator = new LoadGenerator();
+
+    public ReportServiceCF(ExecutorService executor) {
+        this.executor = executor;
+    }
+
+    public ReportServiceCF() {
+        this(ForkJoinPool.commonPool());
+    }
 
     public Others.Report getReport() {
         CompletableFuture<Collection<Others.Item>> itemsCF =

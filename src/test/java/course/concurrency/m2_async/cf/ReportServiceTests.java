@@ -4,6 +4,7 @@ import course.concurrency.m2_async.cf.report.ReportServiceCF;
 import course.concurrency.m2_async.cf.report.ReportServiceExecutors;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,6 +40,6 @@ public class ReportServiceTests {
         executor.awaitTermination(5, TimeUnit.MINUTES);
         long end = System.currentTimeMillis();
 
-        System.out.println("Execution time: " + (end - start));
+        System.out.println("Execution time: " + Duration.ofMillis(end - start));
     }
 }

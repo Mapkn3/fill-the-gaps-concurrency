@@ -1,0 +1,33 @@
+ядер: 6; логических процессоров: 12; гипертрейдинг присутствует
+
+sleep
+|ExecutorService           |Execution time |
+--------------------------------------------
+| newSingleThreadExecutor()|     PT5M0.013S|
+|     newCachedThreadPool()|      PT15.077S|
+|     newFixedThreadPool(1)|     PT5M0.005S|
+|     newFixedThreadPool(2)|     PT5M0.008S|
+|     newFixedThreadPool(3)|    PT4M32.865S|
+|    newFixedThreadPool(10)|    PT1M22.871S|
+|    newFixedThreadPool(36)|      PT24.085S|
+|   newFixedThreadPool(100)|      PT15.097S|
+| ForkJoinPool.commonPool()|    PT1M19.834S|
+
+
+
+compute
+|ExecutorService           |Execution time |
+--------------------------------------------
+| newSingleThreadExecutor()|      PT10.715S|
+|     newCachedThreadPool()|       PT2.289S|
+|     newFixedThreadPool(1)|      PT10.248S|
+|     newFixedThreadPool(2)|       PT5.385S|
+|     newFixedThreadPool(3)|       PT3.684S|
+|    newFixedThreadPool(10)|       PT2.181S|
+|    newFixedThreadPool(36)|       PT2.189S|
+|   newFixedThreadPool(100)|       PT2.206S|
+| ForkJoinPool.commonPool()|       PT2.262S|
+
+Выводы:
+- время выполнения с newCachedThreadPool() минимально, для newFixedThreadPool время выполнения уменьшается линейно с увеличением кол-ва потоков в пуле потоков и стремится к времени выполнения с newCachedThreadPool(), newSingleThreadExecutor не подходит для параллельного выполнения множественных однотипных несвязанных операций;
+- скорость выполнения compute в разы превышает скорость выполнения sleep;
