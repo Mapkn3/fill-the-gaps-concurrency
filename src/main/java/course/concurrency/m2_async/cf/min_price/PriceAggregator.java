@@ -8,7 +8,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
-import static java.util.Comparator.naturalOrder;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
@@ -37,8 +36,9 @@ public class PriceAggregator {
 
         return priceFutures.stream()
                 .map(CompletableFuture::join)
-                .filter(price -> !price.isNaN())
-                .min(naturalOrder())
+                .filter(Double::isFinite)
+                .mapToDouble(price -> price)
+                .min()
                 .orElse(Double.NaN);
     }
 
