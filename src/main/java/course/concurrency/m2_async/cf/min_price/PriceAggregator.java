@@ -35,9 +35,8 @@ public class PriceAggregator {
         CompletableFuture.allOf(priceFutures.toArray(new CompletableFuture[0])).join();
 
         return priceFutures.stream()
-                .map(CompletableFuture::join)
+                .mapToDouble(CompletableFuture::join)
                 .filter(Double::isFinite)
-                .mapToDouble(price -> price)
                 .min()
                 .orElse(Double.NaN);
     }
