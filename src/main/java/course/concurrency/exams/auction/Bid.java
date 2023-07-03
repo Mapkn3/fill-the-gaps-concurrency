@@ -11,6 +11,10 @@ public class Bid {
         this.price = price;
     }
 
+    public static Bid defaultBid() {
+        return new Bid(-1L, -1L, -1L);
+    }
+
     public Long getId() {
         return id;
     }
