@@ -12,19 +12,18 @@ public class AuctionOptimistic implements Auction {
         this.latestBidReference = new AtomicReference<>(Bid.defaultBid());
     }
 
-    public boolean propose(Bid bid)  {
-        boolean bidIsGreaterThanLatest;
+    public boolean propose(Bid bid) {
         Bid latestBid;
         do {
             latestBid = latestBidReference.get();
-            bidIsGreaterThanLatest = bid.getPrice() > latestBid.getPrice();
-        } while (bidIsGreaterThanLatest && !latestBidReference.compareAndSet(latestBid, bid));
+            if (bid.getPrice() <= latestBid.getPrice()) {
+                return false;
+            }
+        } while (!latestBidReference.compareAndSet(latestBid, bid));
 
-        if (bidIsGreaterThanLatest) {
-            notifier.sendOutdatedMessage(latestBid);
-        }
+        notifier.sendOutdatedMessage(latestBid);
 
-        return bidIsGreaterThanLatest;
+        return true;
     }
 
     public Bid getLatestBid() {
