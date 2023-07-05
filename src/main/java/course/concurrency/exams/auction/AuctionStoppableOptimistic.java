@@ -1,28 +1,25 @@
 package course.concurrency.exams.auction;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 
 public class AuctionStoppableOptimistic implements AuctionStoppable {
 
     private final Notifier notifier;
-    private final AtomicReference<Bid> latestBidReference;
-    private final AtomicBoolean atomicAuctionHasBeenStopped;
+    private final AtomicMarkableReference<Bid> latestBidReference;
 
     public AuctionStoppableOptimistic(Notifier notifier) {
         this.notifier = notifier;
-        this.latestBidReference = new AtomicReference<>(Bid.defaultBid());
-        this.atomicAuctionHasBeenStopped = new AtomicBoolean(false);
+        this.latestBidReference = new AtomicMarkableReference<>(Bid.defaultBid(), false);
     }
 
     public boolean propose(Bid bid) {
         Bid latestBid;
         do {
-            latestBid = latestBidReference.get();
-            if ((bid.getPrice() <= latestBid.getPrice()) || atomicAuctionHasBeenStopped.get()) {
+            latestBid = latestBidReference.getReference();
+            if ((bid.getPrice() <= latestBid.getPrice()) || latestBidReference.isMarked()) {
                 return false;
             }
-        } while (!latestBidReference.compareAndSet(latestBid, bid));
+        } while (!latestBidReference.compareAndSet(latestBid, bid, false, false));
 
         notifier.sendOutdatedMessage(latestBid);
 
@@ -30,11 +27,14 @@ public class AuctionStoppableOptimistic implements AuctionStoppable {
     }
 
     public Bid getLatestBid() {
-        return latestBidReference.get();
+        return latestBidReference.getReference();
     }
 
     public Bid stopAuction() {
-        atomicAuctionHasBeenStopped.compareAndSet(false, true);
-        return latestBidReference.get();
+        Bid latestBid;
+        do {
+            latestBid = latestBidReference.getReference();
+        } while (!latestBidReference.attemptMark(latestBid, true));
+        return latestBid;
     }
 }
