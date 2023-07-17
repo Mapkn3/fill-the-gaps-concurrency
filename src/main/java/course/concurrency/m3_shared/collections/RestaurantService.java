@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -19,7 +18,7 @@ public class RestaurantService {
     private final ConcurrentMap<String, Integer> stat;
 
     public RestaurantService() {
-        stat = new ConcurrentSkipListMap<>();
+        stat = new ConcurrentHashMap<>();
     }
 
     public Restaurant getByName(String restaurantName) {
