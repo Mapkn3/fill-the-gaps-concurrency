@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
 import static java.util.stream.Collectors.toSet;
 
@@ -15,7 +16,7 @@ public class RestaurantService {
         put("C", new Restaurant("C"));
     }};
 
-    private final ConcurrentMap<String, Integer> stat;
+    private final ConcurrentMap<String, LongAdder> stat;
 
     public RestaurantService() {
         stat = new ConcurrentHashMap<>();
@@ -27,13 +28,13 @@ public class RestaurantService {
     }
 
     public void addToStat(String restaurantName) {
-        stat.merge(restaurantName, 1, Integer::sum);
+        stat.computeIfAbsent(restaurantName, ignore -> new LongAdder()).increment();
     }
 
     public Set<String> printStat() {
         return stat.entrySet()
                 .stream()
-                .map(entry -> entry.getKey() + " - " + entry.getValue())
+                .map(entry -> entry.getKey() + " - " + entry.getValue().sum())
                 .collect(toSet());
     }
 }
