@@ -1,66 +1,92 @@
 package course.concurrency.m3_shared.immutable;
 
 import java.util.List;
+import java.util.Optional;
 
+import static course.concurrency.m3_shared.immutable.Order.Status.IN_PROGRESS;
 import static course.concurrency.m3_shared.immutable.Order.Status.NEW;
+import static java.util.Objects.requireNonNullElseGet;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toUnmodifiableList;
 
-public class Order {
+public final class Order {
 
-    public enum Status { NEW, IN_PROGRESS, DELIVERED }
-
-    private Long id;
-    private List<Item> items;
+    private final Long id;
+    private final List<Item> items;
     private PaymentInfo paymentInfo;
-    private boolean isPacked;
-    private Status status;
+    private final boolean packed;
+    private final Status status;
 
-    public Order(List<Item> items) {
-        this.items = items;
-        this.status = NEW;
+    private Order(Long id, List<Item> items, PaymentInfo paymentInfo, boolean packed, Status status) {
+        this.id = id;
+        this.items = freeze(requireNonNullElseGet(items, List::<Item>of));
+        if (paymentInfo != null) {
+            this.paymentInfo = paymentInfo.clone();
+        }
+        this.packed = packed;
+        this.status = status;
     }
 
-    public synchronized boolean checkStatus() {
-        if (items != null && !items.isEmpty() && paymentInfo != null && isPacked) {
-            return true;
-        }
-        return false;
+    public static Order init(Long id, List<Item> items) {
+        return new Order(id, freeze(items), null, false, NEW);
+    }
+
+    public boolean readyForDelivery() {
+        return items != null && !items.isEmpty() && paymentInfo != null && packed;
     }
 
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public List<Item> getItems() {
-        return items;
+        return requireNonNullElseGet(items, List::<Item>of)
+                .stream()
+                .map(Item::clone)
+                .collect(toList());
     }
 
-    public PaymentInfo getPaymentInfo() {
-        return paymentInfo;
+    public Optional<PaymentInfo> getPaymentInfo() {
+        return Optional.ofNullable(paymentInfo)
+                .map(PaymentInfo::clone);  // need deep clone if contains at least one non-primitive field
     }
 
-    public void setPaymentInfo(PaymentInfo paymentInfo) {
-        this.paymentInfo = paymentInfo;
-        this.status = Status.IN_PROGRESS;
+    public Order withPaymentInfo(PaymentInfo paymentInfo) {
+        return new Order(this.id, this.items, paymentInfo.clone(), this.packed, IN_PROGRESS);
     }
 
     public boolean isPacked() {
-        return isPacked;
+        return packed;
     }
 
-    public void setPacked(boolean packed) {
-        isPacked = packed;
-        this.status = Status.IN_PROGRESS;
+    public Order packed() {
+        return new Order(this.id, this.items, this.paymentInfo, true, IN_PROGRESS);
     }
 
-    public Status getStatus() {
-        return status;
+    public Order unpacked() {
+        return new Order(this.id, this.items, this.paymentInfo, false, IN_PROGRESS);
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
+    public boolean hasStatus(Status status) {
+        return this.status == status;
+    }
+
+    public Order withStatus(Status status) {
+        return new Order(this.id, this.items, this.paymentInfo, this.packed, status);
+    }
+
+    private static List<Item> freeze(List<Item> items) {
+        if (items == null) {
+            return null;
+        }
+        return items.stream()
+                .map(Item::clone)
+                .collect(toUnmodifiableList());
+    }
+
+    public enum Status {
+        NEW,
+        IN_PROGRESS,
+        DELIVERED,
     }
 }

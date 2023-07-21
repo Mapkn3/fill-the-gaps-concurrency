@@ -1,46 +1,72 @@
 package course.concurrency.m3_shared.immutable;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static course.concurrency.m3_shared.immutable.Order.Status.DELIVERED;
 
 public class OrderService {
 
-    private Map<Long, Order> currentOrders = new HashMap<>();
-    private long nextId = 0L;
+    private final Map<Long, Order> currentOrders;
+    private final AtomicLong nextId;
 
-    private synchronized long nextId() {
-        return nextId++;
+    public OrderService() {
+        this.currentOrders = new ConcurrentHashMap<>();
+        this.nextId = new AtomicLong(0L);
     }
 
-    public synchronized long createOrder(List<Item> items) {
-        long id = nextId();
-        Order order = new Order(items);
-        order.setId(id);
+    private long nextId() {
+        return nextId.getAndIncrement();
+    }
+
+    public long createOrder(List<Item> items) {
+        var id = nextId();
+        var order = Order.init(id, items);
         currentOrders.put(id, order);
         return id;
     }
 
-    public synchronized void updatePaymentInfo(long orderId, PaymentInfo paymentInfo) {
-        currentOrders.get(orderId).setPaymentInfo(paymentInfo);
-        if (currentOrders.get(orderId).checkStatus()) {
-            deliver(currentOrders.get(orderId));
+    public void updatePaymentInfo(long orderId, PaymentInfo paymentInfo) {
+        var orderWithPaymentInfo = currentOrders.computeIfPresent(
+                orderId,
+                (ignore, order) -> order.withPaymentInfo(paymentInfo)
+        );
+        throwIfOrderIsNull(orderWithPaymentInfo);
+
+        if (orderWithPaymentInfo.readyForDelivery()) {
+            deliver(orderWithPaymentInfo);
         }
     }
 
-    public synchronized void setPacked(long orderId) {
-        currentOrders.get(orderId).setPacked(true);
-        if (currentOrders.get(orderId).checkStatus()) {
-            deliver(currentOrders.get(orderId));
+    public void setPacked(long orderId) {
+        var packedOrder = currentOrders.computeIfPresent(orderId, (ignore, order) -> order.packed());
+        throwIfOrderIsNull(packedOrder);
+
+        if (packedOrder.readyForDelivery()) {
+            deliver(packedOrder);
         }
     }
 
-    private synchronized void deliver(Order order) {
+    private void deliver(Order order) {
         /* ... */
-        currentOrders.get(order.getId()).setStatus(Order.Status.DELIVERED);
+        throwIfOrderIsNull(order);
+        currentOrders.computeIfPresent(
+                order.getId(),
+                (ignore, orderToDelivery) ->
+                        orderToDelivery.hasStatus(DELIVERED) ? orderToDelivery : orderToDelivery.withStatus(DELIVERED)
+        );
+
     }
 
-    public synchronized boolean isDelivered(long orderId) {
-        return currentOrders.get(orderId).getStatus().equals(Order.Status.DELIVERED);
+    public boolean isDelivered(long orderId) {
+        return currentOrders.get(orderId).hasStatus(DELIVERED);
+    }
+
+    private void throwIfOrderIsNull(Order order) {
+        if (order == null) {
+            throw new IllegalStateException("An order not found.");
+        }
     }
 }
