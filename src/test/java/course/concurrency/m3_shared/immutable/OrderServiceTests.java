@@ -17,7 +17,8 @@ public class OrderServiceTests {
 
     @Test
     public void testDelivery() {
-        long orderId = service.createOrder(items);
+        long id = service.nextId();
+        long orderId = service.createOrder(id, items);
         service.setPacked(orderId);
         service.updatePaymentInfo(orderId, new PaymentInfo());
 
@@ -27,7 +28,8 @@ public class OrderServiceTests {
 
     @Test
     public void testDeliveryWithDuplicatePacking() {
-        long orderId = service.createOrder(items);
+        long id = service.nextId();
+        long orderId = service.createOrder(id, items);
         service.setPacked(orderId);
         service.setPacked(orderId);
         service.setPacked(orderId);
@@ -39,7 +41,8 @@ public class OrderServiceTests {
 
     @Test
     public void testPartialCompleteWithDelivery() {
-        long orderId = service.createOrder(items);
+        long id = service.nextId();
+        long orderId = service.createOrder(id, items);
         service.updatePaymentInfo(orderId, new PaymentInfo());
 
         boolean isDelivered = service.isDelivered(orderId);
@@ -48,7 +51,8 @@ public class OrderServiceTests {
 
     @Test
     public void testPartialCompleteWithPacking() {
-        long orderId = service.createOrder(items);
+        long id = service.nextId();
+        long orderId = service.createOrder(id, items);
         service.setPacked(orderId);
 
         boolean isDelivered = service.isDelivered(orderId);
@@ -57,7 +61,8 @@ public class OrderServiceTests {
 
     @Test
     public void testPartialCompleteWith2Packing() {
-        long orderId = service.createOrder(items);
+        long id = service.nextId();
+        long orderId = service.createOrder(id, items);
         service.setPacked(orderId);
         service.setPacked(orderId);
 
@@ -70,18 +75,19 @@ public class OrderServiceTests {
         int iterations = 10_000;
         ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        BlockingQueue<Long> orderToPack = new ArrayBlockingQueue<>(iterations*3);
+        BlockingQueue<Long> orderToPack = new ArrayBlockingQueue<>(iterations * 3);
         BlockingQueue<Long> orderToPay = new ArrayBlockingQueue<>(iterations);
         BlockingQueue<Long> orderIdLog = new ArrayBlockingQueue<>(iterations);
 
-        for(int i = 0; i< iterations; ++i) {
-            Long id = service.createOrder(items);
-                        orderToPack.offer(id);
-                        orderToPay.offer(id);
-                        orderIdLog.offer(id);
+        for (int i = 0; i < iterations; ++i) {
+            long id = service.nextId();
+            long orderId = service.createOrder(id, items);
+            orderToPack.offer(orderId);
+            orderToPay.offer(orderId);
+            orderIdLog.offer(orderId);
         }
 
-        for(int i = 0; i< iterations; ++i) {
+        for (int i = 0; i < iterations; ++i) {
             executor.submit(() -> service.setPacked(orderToPack.poll()));
             executor.submit(() -> service.updatePaymentInfo(orderToPay.poll(), new PaymentInfo()));
         }

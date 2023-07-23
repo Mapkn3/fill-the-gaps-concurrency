@@ -17,15 +17,13 @@ public class OrderService {
         this.nextId = new AtomicLong(0L);
     }
 
-    private long nextId() {
+    public long nextId() {
         return nextId.getAndIncrement();
     }
 
-    public long createOrder(List<Item> items) {
-        var id = nextId();
-        var order = Order.init(id, items);
-        currentOrders.put(id, order);
-        return id;
+    public long createOrder(long id, List<Item> items) {
+        var order = currentOrders.computeIfAbsent(id, orderId -> Order.init(orderId, items));
+        return order.getId();
     }
 
     public void updatePaymentInfo(long orderId, PaymentInfo paymentInfo) {

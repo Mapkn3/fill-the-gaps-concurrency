@@ -19,7 +19,7 @@ public final class Order {
 
     private Order(Long id, List<Item> items, PaymentInfo paymentInfo, boolean packed, Status status) {
         this.id = id;
-        this.items = freeze(requireNonNullElseGet(items, List::<Item>of));
+        this.items = freeze(items);
         if (paymentInfo != null) {
             this.paymentInfo = paymentInfo.clone();
         }
