@@ -48,13 +48,13 @@ public class OrderService {
     }
 
     private void deliver(Order order) {
-        /* ... */
         throwIfOrderIsNull(order);
-        currentOrders.computeIfPresent(
-                order.getId(),
-                (ignore, orderToDelivery) ->
-                        orderToDelivery.hasStatus(DELIVERED) ? orderToDelivery : orderToDelivery.withStatus(DELIVERED)
-        );
+        var orderId = order.getId();
+        if (!currentOrders.containsKey(orderId) || currentOrders.get(orderId).hasStatus(DELIVERED)) {
+            return;
+        }
+        /* ... */
+        currentOrders.computeIfPresent(orderId, (ignore, orderToDelivery) -> orderToDelivery.withStatus(DELIVERED));
 
     }
 
