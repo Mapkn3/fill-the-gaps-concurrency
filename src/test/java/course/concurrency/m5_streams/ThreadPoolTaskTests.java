@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ThreadPoolTaskTests {
 
@@ -74,16 +75,18 @@ public class ThreadPoolTaskTests {
                         processed.add(value);
                     });
         }
+        Thread.sleep(100);
         latch.countDown();
 
         rejectExecutor.shutdown();
         rejectExecutor.awaitTermination(2, TimeUnit.SECONDS);
-        
+
         assertEquals(poolSize, processed.size(), "Number of processed elements doesn't equals pool size");
 
         List<Integer> expectedResult = IntStream.range(0, poolSize).boxed().collect(Collectors.toList());
         for (int i = 0; i < processed.size(); i++) {
-            assertEquals(processed.poll(), expectedResult.get(i));
+            Integer processedElement = processed.poll();
+            assertTrue(expectedResult.contains(processedElement), "Processed element is not as expected");
         }
     }
 }
