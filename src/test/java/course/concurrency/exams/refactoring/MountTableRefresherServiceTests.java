@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
 
 import java.util.List;
@@ -15,18 +16,18 @@ public class MountTableRefresherServiceTests {
 
     private MountTableRefresherService service;
 
+    @Mock
     private Others.RouterStore routerStore;
+    @Mock
     private Others.MountTableManager manager;
-    private Others.LoadingCache routerClientsCache;
+    @Mock
+    private Others.LoadingCache<String, Others.RouterClient> routerClientsCache;
 
     @BeforeEach
     public void setUpStreams() {
         service = new MountTableRefresherService();
         service.setCacheUpdateTimeout(1000);
-        routerStore = mock(Others.RouterStore.class);
-        manager = mock(Others.MountTableManager.class);
         service.setRouterStore(routerStore);
-        routerClientsCache = mock(Others.LoadingCache.class);
         service.setRouterClientsCache(routerClientsCache);
         // service.serviceInit(); // needed for complex class testing, not for now
     }
@@ -46,7 +47,7 @@ public class MountTableRefresherServiceTests {
         when(manager.refresh()).thenReturn(true);
 
         List<Others.RouterState> states = addresses.stream()
-                .map(a -> new Others.RouterState(a)).collect(toList());
+                .map(Others.RouterState::new).collect(toList());
         when(routerStore.getCachedRecords()).thenReturn(states);
         // smth more
 
@@ -66,7 +67,7 @@ public class MountTableRefresherServiceTests {
 
     @Test
     @DisplayName("Some tasks failed")
-    public void halfSuccessedTasks() {
+    public void halfSucceedTasks() {
 
     }
 

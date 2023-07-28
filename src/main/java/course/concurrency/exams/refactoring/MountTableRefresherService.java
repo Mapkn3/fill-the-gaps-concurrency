@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 
 public class MountTableRefresherService {
 
@@ -25,8 +27,9 @@ public class MountTableRefresherService {
     public void serviceInit()  {
         long routerClientMaxLiveTime = 15L;
         this.cacheUpdateTimeout = 10L;
-        routerClientsCache = new Others.LoadingCache<String, Others.RouterClient>();
-        routerStore.getCachedRecords().stream().map(Others.RouterState::getAdminAddress)
+        routerClientsCache = new Others.LoadingCache<>();
+        routerStore.getCachedRecords().stream()
+                .map(Others.RouterState::getAdminAddress)
                 .forEach(addr -> routerClientsCache.add(addr, new Others.RouterClient()));
 
         initClientCacheCleaner(routerClientMaxLiveTime);
@@ -39,14 +42,11 @@ public class MountTableRefresherService {
     }
 
     private void initClientCacheCleaner(long routerClientMaxLiveTime) {
-        ThreadFactory tf = new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                Thread t = new Thread();
-                t.setName("MountTableRefresh_ClientsCacheCleaner");
-                t.setDaemon(true);
-                return t;
-            }
+        ThreadFactory tf = r -> {
+            Thread t = new Thread(r);
+            t.setName("MountTableRefresh_ClientsCacheCleaner");
+            t.setDaemon(true);
+            return t;
         };
 
         clientCacheCleanerScheduler =
@@ -57,7 +57,7 @@ public class MountTableRefresherService {
          */
         clientCacheCleanerScheduler.scheduleWithFixedDelay(
                 () -> routerClientsCache.cleanUp(), routerClientMaxLiveTime,
-                routerClientMaxLiveTime, TimeUnit.MILLISECONDS);
+                routerClientMaxLiveTime, MILLISECONDS);
     }
 
     /**
@@ -69,7 +69,7 @@ public class MountTableRefresherService {
         List<MountTableRefresherThread> refreshThreads = new ArrayList<>();
         for (Others.RouterState routerState : cachedRecords) {
             String adminAddress = routerState.getAdminAddress();
-            if (adminAddress == null || adminAddress.length() == 0) {
+            if (adminAddress == null || adminAddress.isEmpty()) {
                 // this router has not enabled router admin.
                 continue;
             }
@@ -109,8 +109,7 @@ public class MountTableRefresherService {
              * Wait for all the thread to complete, await method returns false if
              * refresh is not finished within specified time
              */
-            boolean allReqCompleted =
-                    countDownLatch.await(cacheUpdateTimeout, TimeUnit.MILLISECONDS);
+            boolean allReqCompleted = countDownLatch.await(cacheUpdateTimeout, MILLISECONDS);
             if (!allReqCompleted) {
                 log("Not all router admins updated their cache");
             }
@@ -138,7 +137,8 @@ public class MountTableRefresherService {
         }
         log(String.format(
                 "Mount table entries cache refresh successCount=%d,failureCount=%d",
-                successCount, failureCount));
+                successCount, failureCount
+        ));
     }
 
     public void log(String message) {
@@ -148,7 +148,7 @@ public class MountTableRefresherService {
     public void setCacheUpdateTimeout(long cacheUpdateTimeout) {
         this.cacheUpdateTimeout = cacheUpdateTimeout;
     }
-    public void setRouterClientsCache(Others.LoadingCache cache) {
+    public void setRouterClientsCache(Others.LoadingCache<String, Others.RouterClient> cache) {
         this.routerClientsCache = cache;
     }
 

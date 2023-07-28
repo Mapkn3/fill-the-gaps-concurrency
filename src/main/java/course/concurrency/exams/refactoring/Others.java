@@ -16,7 +16,7 @@ public class Others {
             map.put(key, value);
         }
 
-        public void invalidate(String address) {
+        public void invalidate(K address) {
             map.remove(address);
         }
 
@@ -29,8 +29,8 @@ public class Others {
     }
 
     public static class RouterState {
-        private static AtomicInteger counter = new AtomicInteger(0);
-        private String adminAddress;
+        private static final AtomicInteger counter = new AtomicInteger(0);
+        private final String adminAddress;
 
         public RouterState(String address) {
             this.adminAddress = address + counter.incrementAndGet();
@@ -51,7 +51,7 @@ public class Others {
 
     public static class MountTableManager {
 
-        private String address;
+        private final String address;
         public MountTableManager(String address) {
             this.address = address;
         }

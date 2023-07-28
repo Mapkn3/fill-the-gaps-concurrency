@@ -8,9 +8,9 @@ public class MountTableRefresherThread extends Thread {
 
     private boolean success;
     /** Admin server on which refreshed to be invoked. */
-    private String adminAddress;
+    private final String adminAddress;
     private CountDownLatch countDownLatch;
-    private MountTableManager manager;
+    private final MountTableManager manager;
 
     public MountTableRefresherThread(MountTableManager manager,
                                      String adminAddress) {
@@ -22,14 +22,14 @@ public class MountTableRefresherThread extends Thread {
 
     /**
      * Refresh mount table cache of local and remote routers. Local and remote
-     * routers will be refreshed differently. Lets understand what are the
+     * routers will be refreshed differently. Let's understand what are the
      * local and remote routers and refresh will be done differently on these
      * routers. Suppose there are three routers R1, R2 and R3. User want to add
      * new mount table entry. He will connect to only one router, not all the
      * routers. Suppose He connects to R1 and calls add mount table entry through
      * API or CLI. Now in this context R1 is local router, R2 and R3 are remote
      * routers. Because add mount table entry is invoked on R1, R1 will update the
-     * cache locally it need not to make RPC call. But R1 will make RPC calls to
+     * cache locally it need not make RPC call. But R1 will make RPC calls to
      * update cache on R2 and R3.
      */
     @Override
@@ -54,8 +54,7 @@ public class MountTableRefresherThread extends Thread {
 
     @Override
     public String toString() {
-        return "MountTableRefreshThread [success=" + success + ", adminAddress="
-                + adminAddress + "]";
+        return "MountTableRefreshThread [success=" + success + ", adminAddress=" + adminAddress + "]";
     }
 
     public String getAdminAddress() {
