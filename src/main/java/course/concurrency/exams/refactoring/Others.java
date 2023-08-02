@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Others {
 
     public static class LoadingCache<K, V> {
-        Map<K,V> map = new ConcurrentHashMap<>();
+        Map<K, V> map = new ConcurrentHashMap<>();
 
         public void add(K key, V value) {
             map.put(key, value);
@@ -20,7 +20,9 @@ public class Others {
             map.remove(address);
         }
 
-        public void cleanUp() { map.clear(); }
+        public void cleanUp() {
+            map.clear();
+        }
 
     }
 
@@ -58,6 +60,29 @@ public class Others {
 
         public boolean refresh() {
             return ThreadLocalRandom.current().nextBoolean();
+        }
+    }
+
+    public static class AddressValidator {
+        public static boolean validate(String address) {
+            return address != null && !address.isBlank();
+        }
+    }
+
+    public static class AddressResolver {
+        public static String resolve(String address) {
+            return isLocalAdmin(address) ? "local" : address;
+        }
+
+        public static boolean isLocalAdmin(String address) {
+            return address.contains("local");
+        }
+    }
+
+    public static class MountTableManagerBuilder {
+        public MountTableManager build(String address) {
+            String resolvedAddress = AddressResolver.resolve(address);
+            return new MountTableManager(resolvedAddress);
         }
     }
 }
