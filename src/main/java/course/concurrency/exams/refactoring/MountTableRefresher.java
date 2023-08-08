@@ -4,7 +4,7 @@ import static course.concurrency.exams.refactoring.Others.MountTableManager;
 
 public class MountTableRefresher implements Runnable {
 
-    private boolean success;
+    private volatile boolean success;
     /** Admin server on which refreshed to be invoked. */
     private final String adminAddress;
     private final MountTableManager manager;

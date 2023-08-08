@@ -10,23 +10,20 @@ import course.concurrency.exams.refactoring.Others.RouterStore;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.CompletableFuture.runAsync;
-import static java.util.concurrent.ForkJoinPool.defaultForkJoinWorkerThreadFactory;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 
 
 public class MountTableRefresherService {
 
-    private final ForkJoinPool mountTableRefresherForkJoinPool;
+    private final ExecutorService executorService;
     private RouterStore routerStore = new RouterStore();
     private long cacheUpdateTimeout;
     /**
@@ -42,17 +39,15 @@ public class MountTableRefresherService {
     private MountTableManagerBuilder mountTableManagerBuilder;
 
     public MountTableRefresherService() {
-        ForkJoinPool.ForkJoinWorkerThreadFactory forkJoinWorkerThreadFactory = pool -> {
-            ForkJoinWorkerThread forkJoinWorkerThread = defaultForkJoinWorkerThreadFactory.newThread(pool);
-            forkJoinWorkerThread.setName("MountTableRefresher[" + forkJoinWorkerThread.getName() + "]");
-            return forkJoinWorkerThread;
+        ThreadFactory threadFactory = r -> {
+            Thread t = new Thread(r);
+            if (r instanceof MountTableRefresher) {
+                t.setName("MountTableRefresh_" + ((MountTableRefresher) r).getAdminAddress());
+                t.setDaemon(true);
+            }
+            return t;
         };
-        mountTableRefresherForkJoinPool = new ForkJoinPool(
-                Runtime.getRuntime().availableProcessors(),
-                forkJoinWorkerThreadFactory,
-                null,
-                false
-        );
+        executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors(), threadFactory);
     }
 
     public void serviceInit() {
@@ -70,6 +65,7 @@ public class MountTableRefresherService {
         clientCacheCleanerScheduler.shutdown();
         // remove and close all admin clients
         routerClientsCache.cleanUp();
+        executorService.shutdown();
     }
 
     private void initClientCacheCleaner(long routerClientMaxLiveTime) {
@@ -96,8 +92,8 @@ public class MountTableRefresherService {
     /**
      * Refresh mount table cache of this router as well as all other routers.
      */
-    public void refresh() {
-        invokeRefresh(
+    public CompletableFuture<Void> refresh() {
+        return invokeRefresh(
                 routerStore.getCachedRecords().stream()
                         .map(RouterState::getAdminAddress)
                         .filter(AddressValidator::validate)
@@ -115,21 +111,24 @@ public class MountTableRefresherService {
         routerClientsCache.invalidate(adminAddress);
     }
 
-    private void invokeRefresh(List<MountTableRefresher> refreshers) {
-        try {
-            CompletableFuture.allOf(
-                    refreshers.stream()
-                            .map(refresher -> runAsync(refresher, mountTableRefresherForkJoinPool))
-                            .toArray(CompletableFuture[]::new)
-            ).get(cacheUpdateTimeout, MILLISECONDS);
-            logResult(refreshers);
-        } catch (TimeoutException e) {
-            log("Not all router admins updated their cache");
-        } catch (InterruptedException e) {
-            log("Mount table cache refresher was interrupted.");
-        } catch (ExecutionException e) {
-            throw new RuntimeException(e);
-        }
+    private CompletableFuture<Void> invokeRefresh(List<MountTableRefresher> refreshers) {
+        return CompletableFuture.allOf(
+                        refreshers.stream()
+                                .map(refresher -> runAsync(refresher, executorService)
+                                        .orTimeout(cacheUpdateTimeout, MILLISECONDS))
+                                .toArray(CompletableFuture[]::new)
+                )
+                .exceptionally(throwable -> {
+                    Throwable cause = throwable.getCause();
+                    if (cause instanceof TimeoutException) {
+                        log("Not all router admins updated their cache");
+                    }
+                    if (cause instanceof InterruptedException) {
+                        log("Mount table cache refresher was interrupted.");
+                    }
+                    return null;
+                })
+                .thenRun(() -> logResult(refreshers));
     }
 
     private void logResult(List<MountTableRefresher> refreshThreads) {
