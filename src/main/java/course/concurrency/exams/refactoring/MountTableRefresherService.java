@@ -123,9 +123,6 @@ public class MountTableRefresherService {
                     if (cause instanceof TimeoutException) {
                         log("Not all router admins updated their cache");
                     }
-                    if (cause instanceof InterruptedException) {
-                        log("Mount table cache refresher was interrupted.");
-                    }
                     return null;
                 })
                 .thenRun(() -> logResult(refreshers));
