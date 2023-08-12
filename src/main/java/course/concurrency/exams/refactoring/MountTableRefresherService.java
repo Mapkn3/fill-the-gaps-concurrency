@@ -92,14 +92,14 @@ public class MountTableRefresherService {
     /**
      * Refresh mount table cache of this router as well as all other routers.
      */
-    public CompletableFuture<Void> refresh() {
-        return invokeRefresh(
+    public void refresh() {
+        invokeRefresh(
                 routerStore.getCachedRecords().stream()
                         .map(RouterState::getAdminAddress)
                         .filter(AddressValidator::validate)
                         .map(this::buildMountTableRefresher)
                         .collect(toList())
-        );
+        ).join();
     }
 
     private MountTableRefresher buildMountTableRefresher(String adminAddress) {

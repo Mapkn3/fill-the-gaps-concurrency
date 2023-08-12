@@ -67,7 +67,7 @@ public class MountTableRefresherServiceTests {
         when(mountTableManagerBuilder.build(anyString())).thenReturn(manager);
 
         // when
-        mockedService.refresh().join();
+        mockedService.refresh();
 
         // then
         verify(mockedService).log("Mount table entries cache refresh successCount=4,failureCount=0");
@@ -90,7 +90,7 @@ public class MountTableRefresherServiceTests {
         when(mountTableManagerBuilder.build(anyString())).thenReturn(manager);
 
         // when
-        mockedService.refresh().join();
+        mockedService.refresh();
 
         // then
         verify(mockedService).log("Mount table entries cache refresh successCount=0,failureCount=4");
@@ -113,7 +113,7 @@ public class MountTableRefresherServiceTests {
         when(mountTableManagerBuilder.build(anyString())).thenReturn(manager);
 
         // when
-        mockedService.refresh().join();
+        mockedService.refresh();
 
         // then
         verify(mockedService).log("Mount table entries cache refresh successCount=2,failureCount=2");
@@ -137,7 +137,7 @@ public class MountTableRefresherServiceTests {
         when(mountTableManagerBuilder.build(anyString())).thenReturn(manager);
 
         // when
-        mockedService.refresh().join();
+        mockedService.refresh();
 
         // then
         verify(mockedService).log("Mount table entries cache refresh successCount=3,failureCount=1");
@@ -165,7 +165,7 @@ public class MountTableRefresherServiceTests {
         when(mountTableManagerBuilder.build(anyString())).thenReturn(manager);
 
         // when
-        mockedService.refresh().join();
+        mockedService.refresh();
 
         // then
         verify(mockedService).log("Mount table entries cache refresh successCount=3,failureCount=1");
