@@ -1,7 +1,7 @@
 package course.concurrency.exams.blocking_queue;
 
 public interface BlockingQueue<T> {
-    void enqueue(T value) throws InterruptedException;
+    void enqueue(T value);
 
-    T dequeue() throws InterruptedException;
+    T dequeue();
 }

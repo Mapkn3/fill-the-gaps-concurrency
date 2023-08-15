@@ -2,13 +2,12 @@ package course.concurrency.exams.blocking_queue;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.Set;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 
 import static java.lang.Thread.State.WAITING;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CustomBlockingQueueTest {
@@ -23,74 +22,33 @@ class CustomBlockingQueueTest {
     }
 
     @Test
-    void enqueueSuccessful() throws InterruptedException {
+    void enqueueSuccessful() {
         var queue = new CustomBlockingQueue<>(1);
-        var enqueueThread = startNewThread(() -> {
-            try {
-                queue.enqueue(new Object());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        enqueueThread.join(AWAIT_MILLIS);
+        queue.enqueue(new Object());
 
-        assertNotEquals(WAITING, enqueueThread.getState());
         assertEquals(1, queue.size());
     }
 
     @Test
-    void dequeueSuccessful() throws InterruptedException {
+    void dequeueSuccessful() {
         var queue = new CustomBlockingQueue<>(1);
         var item = new Object();
-        var enqueueThread = startNewThread(() -> {
-            try {
-                queue.enqueue(item);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        enqueueThread.join(AWAIT_MILLIS);
+        queue.enqueue(item);
+        var dequeuedItem = queue.dequeue();
 
-        assertNotEquals(WAITING, enqueueThread.getState());
-        assertEquals(1, queue.size());
-
-        var dequeueThread = startNewThread(() -> {
-            try {
-                var dequeuedItem = queue.dequeue();
-                assertEquals(item, dequeuedItem);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        dequeueThread.join(AWAIT_MILLIS);
-
-        assertNotEquals(WAITING, dequeueThread.getState());
+        assertEquals(item, dequeuedItem);
         assertEquals(0, queue.size());
     }
 
     @Test
     void secondEnqueueIsBlocked() throws InterruptedException {
         var queue = new CustomBlockingQueue<>(1);
-        var firstEnqueueThread = startNewThread(() -> {
-            try {
-                queue.enqueue(new Object());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        firstEnqueueThread.join(AWAIT_MILLIS);
+        queue.enqueue(new Object());
 
-        assertNotEquals(WAITING, firstEnqueueThread.getState());
         assertEquals(1, queue.size());
 
-        var secondEnqueueThread = startNewThread(() -> {
-            try {
-                queue.enqueue(new Object());
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        secondEnqueueThread.join(AWAIT_MILLIS);
+        var secondEnqueueThread = startNewThread(() -> queue.enqueue(new Object()));
+        Thread.sleep(AWAIT_MILLIS);
 
         assertEquals(WAITING, secondEnqueueThread.getState());
         assertEquals(1, queue.size());
@@ -99,21 +57,15 @@ class CustomBlockingQueueTest {
     @Test
     void onlyDequeueIsBlocked() throws InterruptedException {
         var queue = new CustomBlockingQueue<>(1);
-        var dequeueThread = startNewThread(() -> {
-            try {
-                queue.dequeue();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        });
-        dequeueThread.join(AWAIT_MILLIS);
+        var dequeueThread = startNewThread(queue::dequeue);
+        Thread.sleep(AWAIT_MILLIS);
 
         assertEquals(WAITING, dequeueThread.getState());
         assertEquals(0, queue.size());
     }
 
     @Test
-    void queueShouldWorkAsFIFO() throws InterruptedException {
+    void queueShouldWorkAsFIFO() {
         var queue = new CustomBlockingQueue<Integer>(3);
         queue.enqueue(1);
         queue.enqueue(2);
@@ -128,29 +80,33 @@ class CustomBlockingQueueTest {
 
     @Test
     void shouldWorkInMultithreading() throws InterruptedException {
-        var executorService = Executors.newFixedThreadPool(6);
-        var queue = new CustomBlockingQueue<Integer>(2);
-        var expectedValues = Set.of(0, 1, 2);
-        for (int i = 0; i < 3; i++) {
+        var executorService = Executors.newCachedThreadPool();
+        var queue = new CustomBlockingQueue<Integer>(100);
+        var countOfItems = 1_000;
+        var countDownLatch = new CountDownLatch(1);
+        for (int i = 0; i < countOfItems; i++) {
             executorService.submit(() -> {
                 try {
+                    countDownLatch.await();
                     var dequeuedItem = queue.dequeue();
-                    assertTrue(expectedValues.contains(dequeuedItem));
+                    assertTrue(dequeuedItem >= 0 && dequeuedItem < countOfItems);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             });
         }
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < countOfItems; i++) {
             var item = i;
             executorService.submit(() -> {
                 try {
+                    countDownLatch.await();
                     queue.enqueue(item);
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             });
         }
+        countDownLatch.countDown();
         executorService.shutdown();
 
         assertTrue(executorService.awaitTermination(AWAIT_MILLIS, MILLISECONDS));

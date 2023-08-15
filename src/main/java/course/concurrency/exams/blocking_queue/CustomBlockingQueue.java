@@ -21,11 +21,11 @@ public class CustomBlockingQueue<T> implements BlockingQueue<T> {
     }
 
     @Override
-    public void enqueue(T value) throws InterruptedException {
-        lock.lockInterruptibly();
+    public void enqueue(T value) {
+        lock.lock();
         try {
             while (queue.size() == capacity) {
-                notFull.await();
+                notFull.awaitUninterruptibly();
             }
             queue.addFirst(value);
             notEmpty.signal();
@@ -35,12 +35,12 @@ public class CustomBlockingQueue<T> implements BlockingQueue<T> {
     }
 
     @Override
-    public T dequeue() throws InterruptedException {
+    public T dequeue() {
         T result;
-        lock.lockInterruptibly();
+        lock.lock();
         try {
             while (queue.isEmpty()) {
-                notEmpty.await();
+                notEmpty.awaitUninterruptibly();
             }
             result = queue.removeLast();
             notFull.signal();
