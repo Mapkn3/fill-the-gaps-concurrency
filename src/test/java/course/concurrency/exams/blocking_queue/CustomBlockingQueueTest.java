@@ -80,37 +80,53 @@ class CustomBlockingQueueTest {
 
     @Test
     void shouldWorkInMultithreading() throws InterruptedException {
-        var executorService = Executors.newCachedThreadPool();
-        var queue = new CustomBlockingQueue<Integer>(100);
-        var countOfItems = 1_000;
+        var executorService = Executors.newFixedThreadPool(3);
+        var queue = new CustomBlockingQueue<Integer>(10);
+        var readIterations = 1_000;
+        var writeIterations = readIterations * 2;
+
         var countDownLatch = new CountDownLatch(1);
-        for (int i = 0; i < countOfItems; i++) {
-            executorService.submit(() -> {
-                try {
-                    countDownLatch.await();
-                    var dequeuedItem = queue.dequeue();
-                    assertTrue(dequeuedItem >= 0 && dequeuedItem < countOfItems);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
-        for (int i = 0; i < countOfItems; i++) {
-            var item = i;
-            executorService.submit(() -> {
-                try {
-                    countDownLatch.await();
-                    queue.enqueue(item);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            });
-        }
+
+        executorService.submit(() -> {
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            for (int i = 0; i < readIterations; i++) {
+                var dequeuedItem = queue.dequeue();
+                assertTrue(dequeuedItem >= 0 && dequeuedItem < writeIterations);
+            }
+        });
+        executorService.submit(() -> {
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            for (int i = 0; i < readIterations; i++) {
+                var dequeuedItem = queue.dequeue();
+                assertTrue(dequeuedItem >= 0 && dequeuedItem < writeIterations);
+            }
+        });
+
+        executorService.submit(() -> {
+            try {
+                countDownLatch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            for (int i = 0; i < writeIterations; i++) {
+                var item = i;
+                queue.enqueue(item);
+            }
+        });
+
         countDownLatch.countDown();
+
         executorService.shutdown();
 
         assertTrue(executorService.awaitTermination(AWAIT_MILLIS, MILLISECONDS));
         assertEquals(0, queue.size());
-
     }
 }
