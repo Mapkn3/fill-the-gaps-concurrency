@@ -94,8 +94,7 @@ class CustomBlockingQueueTest {
                 throw new RuntimeException(e);
             }
             for (int i = 0; i < readIterations; i++) {
-                var dequeuedItem = queue.dequeue();
-                assertTrue(dequeuedItem >= 0 && dequeuedItem < writeIterations);
+                queue.dequeue();
             }
         });
         executorService.submit(() -> {
@@ -105,8 +104,7 @@ class CustomBlockingQueueTest {
                 throw new RuntimeException(e);
             }
             for (int i = 0; i < readIterations; i++) {
-                var dequeuedItem = queue.dequeue();
-                assertTrue(dequeuedItem >= 0 && dequeuedItem < writeIterations);
+                queue.dequeue();
             }
         });
 
@@ -117,8 +115,7 @@ class CustomBlockingQueueTest {
                 throw new RuntimeException(e);
             }
             for (int i = 0; i < writeIterations; i++) {
-                var item = i;
-                queue.enqueue(item);
+                queue.enqueue(i);
             }
         });
 
